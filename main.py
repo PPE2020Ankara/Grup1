@@ -592,9 +592,9 @@ class GirisEkrani(QWidget):
 
 def main():
     uygulama = QApplication(sys.argv)
-    dene = FiltreEkrani()
-    dene.show()
-    #pencere = GirisEkrani()
+    #dene = FiltreEkrani()
+    #dene.show()
+    pencere = GirisEkrani()
     sys.exit(uygulama.exec_())
 
 if __name__ == '__main__':
