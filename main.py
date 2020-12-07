@@ -2,6 +2,7 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtTest import *
+from PyQt5.QtCore import Qt
 import sqlite3
 
 baslikfont = QFont("Century Gothic",20)
@@ -10,7 +11,8 @@ yaziFont = QFont("Century Gothic",14)
 formYaziFont = QFont("Century Gothic",12)
 uyariFont = QFont("Century Gothic",14,)
 yaziSitil = "color :white"
-baslikSitil = "color :red"
+yaziSitilB = "color :white;font-weight:bold;"
+baslikSitil = "color :red;font-weight:bold;"
 uyariSitil = "color :red"
 editSitil = "color :black;background-color :white"
 btnSitil = "color :black;background-color :gray"
@@ -312,50 +314,145 @@ class FiltreEkrani(QWidget):
     def __init__(self):
         super().__init__()        
 
-        pencereBaslik = "Filtre Ekranı"        
-        yatay = QHBoxLayout()
-        dikey = QVBoxLayout()        
+        pencereBaslik = "Netflix Filtreleme Ekranı"        
+        yatay0 = QHBoxLayout()
+        dikey1 = QVBoxLayout()
+        dikey2 = QVBoxLayout()
+        yatayBtn = QHBoxLayout()
+        yatayBosluk = QHBoxLayout()          
         
 
-        baslik = QLabel("FİLTRE EKRANI")
-        baslik.setStyleSheet(yaziSitil)
-        baslik.setFont(baslikfont)
+        logo = QLabel("FİLTRE EKRANI")
+        logo.setFixedHeight(175)
+        logo.setFixedWidth(250)
+        logo.setPixmap(QPixmap("logoF.png"))
         
-        aciklama1 = QLabel("Merhaba " + GirisEkrani.kullanici)
-        aciklama1.setStyleSheet(yaziSitil)
-        aciklama1.setFont(baslikfont)
+        baslik = QLabel("Netflix Filtreleme")
+        baslik.setFixedHeight(100)
+        baslik.setStyleSheet(baslikSitil)
+        baslik.setFont(baslikfont)       
         
-        aciklama = QLabel("Filtrelemeler bu ekranda yapılacak")
-        aciklama.setStyleSheet(yaziSitil)
+        turL = QLabel("Tür")
+        turL.setFixedHeight(75)
+        turL.setStyleSheet(yaziSitilB)
+        turL.setFont(yaziFont)
         
+        self.tur = QComboBox()
+        self.tur.setStyleSheet(editSitil)
+        self.tur.setFont(yaziFont)
+        self.tur.addItems(["Film","Falan","Filan"])
+        
+        ulkeL = QLabel("Ülke")
+        ulkeL.setFixedHeight(75)
+        ulkeL.setStyleSheet(yaziSitilB)
+        ulkeL.setFont(yaziFont)
+        
+        self.ulke = QComboBox()
+        self.ulke.setStyleSheet(editSitil)
+        self.ulke.setFont(yaziFont)
+        self.ulke.addItems(["Türkiye","ABD","Fransa"])
+        
+        yonetmenL = QLabel("Yönetmen")
+        yonetmenL.setFixedHeight(75)
+        yonetmenL.setStyleSheet(yaziSitilB)
+        yonetmenL.setFont(yaziFont)
+        
+        self.yonetmen = QLineEdit()
+        self.yonetmen.setStyleSheet(editSitil)
+        self.yonetmen.setFont(yaziFont) 
+        
+        sureL = QLabel("Süre")
+        sureL.setFixedHeight(75)
+        sureL.setStyleSheet(yaziSitilB)
+        sureL.setFont(yaziFont)
+        
+        self.sure = QSlider(Qt.Horizontal,self)
+        self.sure.setRange(0, 200)
+        self.sure.setFocusPolicy(Qt.NoFocus)
+        self.sure.setPageStep(5)
+        self.sure.setStyleSheet(editSitil)
+        self.sure.setFont(yaziFont) 
+        
+                       
         guncelle = QPushButton("Bilgilerimi Güncelle",font=butonFont)
         guncelle.setFixedWidth(350)
         guncelle.setStyleSheet(btnSitil)       
         guncelle.clicked.connect(self.guncellemeFormu)
         
-               
-        dikey.addStretch()
-        dikey.addWidget(baslik)
-        dikey.addWidget(aciklama1)
-        dikey.addWidget(aciklama)
-        dikey.addWidget(guncelle)
-        dikey.addStretch()
+        listeleBnt = QPushButton("Listele",font=butonFont)
+        listeleBnt.setFixedWidth(100)
+        listeleBnt.setStyleSheet(btnSitil)       
+        listeleBnt.clicked.connect(self.listele)
+        
+        indirBtn = QPushButton("Dosyayı İndir",font=butonFont)
+        indirBtn.setFixedWidth(170)
+        indirBtn.setStyleSheet(btnSitil)       
+        indirBtn.clicked.connect(self.dosyaIndir)
+        
+        cikisBtn = QPushButton("Çıkış",font=butonFont)
+        cikisBtn.setFixedWidth(170)
+        cikisBtn.setStyleSheet(btnSitil)       
+        cikisBtn.clicked.connect(self.cikis)
+        
+        self.sonuclar = QListWidget()
+        self.sonuclar.setFixedWidth(700)
+        self.sonuclar.setFixedHeight(500)
+        self.sonuclar.setStyleSheet(editSitil)
+        self.sonuclar.setFont(yaziFont) 
+        
+        
+        dikey1.addWidget(logo)
+        dikey1.addWidget(turL)
+        dikey1.addWidget(self.tur)
+        dikey1.addWidget(ulkeL)
+        dikey1.addWidget(self.ulke)
+        dikey1.addWidget(yonetmenL)
+        dikey1.addWidget(self.yonetmen)
+        dikey1.addWidget(sureL)
+        dikey1.addWidget(self.sure)
+        dikey1.addWidget(listeleBnt)
+        dikey1.addStretch()
+        
+        yatayBtn.addStretch()
+        yatayBtn.addWidget(indirBtn)
+        yatayBtn.addWidget(cikisBtn)
+        
+        bosluk = QLabel("")
+        bosluk.setFixedHeight(50)
+        yatayBosluk.addWidget(bosluk)
+                
+        dikey2.addWidget(baslik)
+        dikey2.addWidget(self.sonuclar)
+        dikey2.addStretch()  
+        dikey2.addLayout(yatayBtn)
+        dikey2.addLayout(yatayBosluk)
+                     
+        yatay0.addStretch()
+        yatay0.addLayout(dikey1)
+        yatay0.addStretch()
+        yatay0.addLayout(dikey2) 
+        yatay0.addStretch()     
+                     
 
-        yatay.addStretch()
-        yatay.addLayout(dikey)
-        yatay.addStretch()
-
-        self.setLayout(yatay)
+        self.setLayout(yatay0)
         self.setGeometry(200,200,1024,768)
+        self.setFixedSize(1054, 768)
         self.setWindowTitle(pencereBaslik)
         self.setStyleSheet(pencereSitil)
     
     def guncellemeFormu(self):
         self.gFormu = KayitGuncelle()   # kayıt güncelleme formunu açar
-        self.gFormu.show()  
+        self.gFormu.show()
+        
+    def listele(self):
+        pass   # listeleme komutları indirme komutları
+    
+    def dosyaIndir(self):
+        pass   # dosya indirme komutları        
+  
 
-    def geriDon(self):
-        self.close()   # Formu kapatmak için kullanılacak
+    def cikis(self):
+        qApp.quit()   # çıkış  için kullanılacak
 
 
 class GirisEkrani(QWidget):
@@ -461,10 +558,7 @@ class GirisEkrani(QWidget):
         anaEkran.addLayout(yatay)
 
         self.setLayout(anaEkran)
-
-        #self.showFullScreen()
-        #self.setGeometry(300, 300, 800, 600)
-        #self.resize(800,600)
+        
         self.setFixedSize(800, 600)
         self.setWindowTitle(self.pencereBaslik)
         self.setStyleSheet(pencereSitil)
@@ -498,7 +592,9 @@ class GirisEkrani(QWidget):
 
 def main():
     uygulama = QApplication(sys.argv)
-    pencere = GirisEkrani()
+    dene = FiltreEkrani()
+    dene.show()
+    #pencere = GirisEkrani()
     sys.exit(uygulama.exec_())
 
 if __name__ == '__main__':
