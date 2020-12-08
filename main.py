@@ -4,6 +4,14 @@ from PyQt5.QtGui import *
 from PyQt5.QtTest import *
 from PyQt5.QtCore import Qt
 import sqlite3
+import pandas as pd
+
+# csv dosyasını okuma ve nan değerleri unknown olarak değiştirme
+
+df = pd.read_csv('netflix_titles.csv')
+df = df.fillna(value= "unknown")
+
+# formlarda kullanılan yazı fontları ve stilleri burada tanımlanıyor
 
 baslikfont = QFont("Century Gothic",20)
 butonFont = QFont("Century Gothic",14)
@@ -18,6 +26,8 @@ editSitil = "color :black;background-color :white"
 btnSitil = "color :black;background-color :gray"
 pencereSitil = "background-color :black"
 
+# veritabanı bağlantısı tablo yoksa oluşturuluyor 
+
 baglanti = sqlite3.connect("vt.db")
 kalem = baglanti.cursor()
 kalem.execute("""CREATE TABLE IF NOT EXISTS "kullanici" (
@@ -28,6 +38,8 @@ kalem.execute("""CREATE TABLE IF NOT EXISTS "kullanici" (
 	"dogumTarihi"	INTEGER,
 	PRIMARY KEY("id" AUTOINCREMENT)
 )""")
+
+# yeni kullanıcı kayıt formu için sınıf tanımı
 
 class KayitFormu(QWidget):
     def __init__(self):
@@ -137,6 +149,8 @@ class KayitFormu(QWidget):
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
 
+# yeni kullanıcı formundan gelen bilgilerin veritabanına eklenmesi icin tanımlanan fonksiyon
+
     def yeniEkle(self):
         self.uyari.setText("Kontrol ediliyor. Lütfen bekleyin...")
         QTest.qWait(750)
@@ -167,8 +181,12 @@ class KayitFormu(QWidget):
                 QTest.qWait(500)          
                 #self.close()          
  
+ #formu kapatmak için kullanılacak fonksiyon
+    
     def geriDon(self):
         self.close()   # Formu kapatmak için kullanılacak
+
+# kullanıcı bilgilerinin güncellenmesi için açılacak form
 
 class KayitGuncelle(QWidget):
     def __init__(self):
@@ -281,6 +299,8 @@ class KayitGuncelle(QWidget):
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
 
+# güncelleme formundan gelen bilgilerin veritabanına yazılması için kullanılan fonksiyon
+
     def guncelle(self):
         self.uyari.setText("Kontrol ediliyor. Lütfen bekleyin...")
         QTest.qWait(750)
@@ -310,6 +330,8 @@ class KayitGuncelle(QWidget):
     def geriDon(self):
         self.close()   # Formu kapatmak için kullanılacak
 
+# filitre ekranı formu
+
 class FiltreEkrani(QWidget):
     def __init__(self):
         super().__init__()        
@@ -319,9 +341,9 @@ class FiltreEkrani(QWidget):
         dikey1 = QVBoxLayout()
         dikey2 = QVBoxLayout()
         yatayBtn = QHBoxLayout()
-        yatayBosluk = QHBoxLayout()          
+        yatayBosluk = QHBoxLayout()   
         
-
+        
         logo = QLabel("FİLTRE EKRANI")
         logo.setFixedHeight(175)
         logo.setFixedWidth(250)
@@ -337,20 +359,27 @@ class FiltreEkrani(QWidget):
         turL.setStyleSheet(yaziSitilB)
         turL.setFont(yaziFont)
         
+        turler = self.bilgiAl(df["type"])   # bilgiAl fonksiyonu csv den türleri verir
+        
         self.tur = QComboBox()
         self.tur.setStyleSheet(editSitil)
         self.tur.setFont(yaziFont)
-        self.tur.addItems(["Film","Falan","Filan"])
+        self.tur.addItem("Seçiniz")
+        self.tur.addItems(turler)
         
+               
         ulkeL = QLabel("Ülke")
         ulkeL.setFixedHeight(75)
         ulkeL.setStyleSheet(yaziSitilB)
         ulkeL.setFont(yaziFont)
         
+        ulkeler = self.bilgiAl(df["country"])
+        ulkeler[0] = "Seçiniz" # bilgiAl fonksiyonu csv den ülkeleri verir 
+        
         self.ulke = QComboBox()
         self.ulke.setStyleSheet(editSitil)
         self.ulke.setFont(yaziFont)
-        self.ulke.addItems(["Türkiye","ABD","Fransa"])
+        self.ulke.addItems(ulkeler)
         
         yonetmenL = QLabel("Yönetmen")
         yonetmenL.setFixedHeight(75)
@@ -440,21 +469,33 @@ class FiltreEkrani(QWidget):
         self.setWindowTitle(pencereBaslik)
         self.setStyleSheet(pencereSitil)
     
+    # güncelle butonu ile güncelleme formunun açılması için kullanılan fonksiyon
     def guncellemeFormu(self):
         self.gFormu = KayitGuncelle()   # kayıt güncelleme formunu açar
         self.gFormu.show()
-        
+    # filtreler seçildikten sonra listeleme sonuçlarının gösterilmesi    
     def listele(self):
         pass   # listeleme komutları indirme komutları
     
+    # dosya indirme işlemlerinin yapıldığı fonksiyon
     def dosyaIndir(self):
         pass   # dosya indirme komutları        
   
-
+# çıkış butonuna basılması ile çalışacak fonksiyon
     def cikis(self):
         qApp.quit()   # çıkış  için kullanılacak
+        
+    def bilgiAl(self,veri): # csv dosyasından istyenilen sütünları liste olarak sıralı bir şekilde geri döndürür
+        kume =set()
+        veriler = veri.tolist()
+        for i in veriler:
+            for j in i.split(","):
+                kume.add(j.strip())
 
+        result = sorted(list(kume))
+        return result
 
+# kullanıcı giriş ekranı
 class GirisEkrani(QWidget):
     
     kullanici = ""
@@ -592,9 +633,9 @@ class GirisEkrani(QWidget):
 
 def main():
     uygulama = QApplication(sys.argv)
-    #dene = FiltreEkrani()
-    #dene.show()
-    pencere = GirisEkrani()
+    dene = FiltreEkrani()
+    dene.show()
+    #pencere = GirisEkrani()
     sys.exit(uygulama.exec_())
 
 if __name__ == '__main__':
