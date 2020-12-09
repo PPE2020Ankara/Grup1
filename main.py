@@ -333,6 +333,7 @@ class KayitGuncelle(QWidget):
 # filitre ekranı formu
 
 class FiltreEkrani(QWidget):
+    filmAdi = ""
     def __init__(self):
         super().__init__()        
 
@@ -359,7 +360,7 @@ class FiltreEkrani(QWidget):
         turL.setStyleSheet(yaziSitilB)
         turL.setFont(yaziFont)
         
-        turler = self.bilgiAl(df["type"])   # bilgiAl fonksiyonu csv den türleri verir
+        turler = self.bilgiAl(df["listed_in"])   # bilgiAl fonksiyonu csv den türleri verir
         
         self.tur = QComboBox()
         self.tur.setStyleSheet(editSitil)
@@ -404,7 +405,7 @@ class FiltreEkrani(QWidget):
         
                        
         guncelle = QPushButton("Bilgilerimi Güncelle",font=butonFont)
-        guncelle.setFixedWidth(350)
+        guncelle.setFixedWidth(250)
         guncelle.setStyleSheet(btnSitil)       
         guncelle.clicked.connect(self.guncellemeFormu)
         
@@ -423,11 +424,21 @@ class FiltreEkrani(QWidget):
         cikisBtn.setStyleSheet(btnSitil)       
         cikisBtn.clicked.connect(self.cikis)
         
+        self.uyariLabel = QLabel("")
+        self.uyariLabel.setFixedHeight(100)
+        self.uyariLabel.setStyleSheet(uyariSitil)
+        self.uyariLabel.setFont(uyariFont)  
+               
+        sonuc = df["title"].sort_values()
+        #print(len(sonuc))
+        
         self.sonuclar = QListWidget()
-        self.sonuclar.setFixedWidth(700)
+        self.sonuclar.setFixedWidth(600)
         self.sonuclar.setFixedHeight(500)
+        self.sonuclar.addItems(sonuc)
         self.sonuclar.setStyleSheet(editSitil)
         self.sonuclar.setFont(yaziFont) 
+        self.sonuclar.itemClicked.connect(self.filmBilgileri)
         
         
         dikey1.addWidget(logo)
@@ -440,9 +451,11 @@ class FiltreEkrani(QWidget):
         dikey1.addWidget(sureL)
         dikey1.addWidget(self.sure)
         dikey1.addWidget(listeleBnt)
+        dikey1.addWidget(self.uyariLabel)
         dikey1.addStretch()
         
         yatayBtn.addStretch()
+        yatayBtn.addWidget(guncelle)
         yatayBtn.addWidget(indirBtn)
         yatayBtn.addWidget(cikisBtn)
         
@@ -473,9 +486,37 @@ class FiltreEkrani(QWidget):
     def guncellemeFormu(self):
         self.gFormu = KayitGuncelle()   # kayıt güncelleme formunu açar
         self.gFormu.show()
+    
+    def filmBilgileri(self,item):
+        FiltreEkrani.filmAdi = item.text()        
+        self.filmBilgi = FilmBilgileri()   # kayıt güncelleme formunu açar
+        self.filmBilgi.show()
+    
     # filtreler seçildikten sonra listeleme sonuçlarının gösterilmesi    
     def listele(self):
-        pass   # listeleme komutları indirme komutları
+        tur = self.tur.currentText()
+        ulke = self.ulke.currentText()
+        yonetmen = self.yonetmen.text()
+        sure = self.sure.value()
+        
+        result = df              
+        
+        if tur != "Seçiniz":            
+            result = result[(result.listed_in.str.contains(tur)) | (result['listed_in']==tur)]
+            #print(len(result))           
+        
+        if ulke != "Seçiniz":
+            result = result[(result.country.str.contains(ulke)) | (result['country']==ulke)]
+            #print(len(result))
+        
+        if yonetmen != "":
+            result = result[(result.director.str.contains(yonetmen)) | (result['director']==yonetmen)]
+            #print(len(result))              
+        
+        #print(len(result))
+        self.uyariLabel.setText(str(len(result)) + " Sonuç listelendi")    
+        self.sonuclar.clear()
+        self.sonuclar.addItems(result["title"].sort_values())
     
     # dosya indirme işlemlerinin yapıldığı fonksiyon
     def dosyaIndir(self):
@@ -494,6 +535,69 @@ class FiltreEkrani(QWidget):
 
         result = sorted(list(kume))
         return result
+
+# Film bilgi ekranı
+class FilmBilgileri(QWidget):
+    def __init__(self):
+        super().__init__()  
+                
+        pencereBaslik = "Film Bilgisi"
+        yatay = QHBoxLayout()
+        dikey = QVBoxLayout()
+        yatayAdi = QHBoxLayout()
+        yatayKadi = QHBoxLayout()
+        yatayParola = QHBoxLayout()
+        yatayDtarihi = QHBoxLayout()
+        yatayUyari = QHBoxLayout()
+        yatayBtn = QHBoxLayout()
+        
+        filmAdi = FiltreEkrani.filmAdi          
+        result = df[df['title']==filmAdi]        
+        
+        
+        baslik = QLabel("FİLM ADI  :  " + filmAdi)
+        baslik.setFixedWidth(700)
+        baslik.setStyleSheet(yaziSitilB)
+        baslik.setFont(yaziFont)         
+        
+        filmBilgileri = QTextEdit()
+        filmBilgileri.setFixedWidth(675)
+        filmBilgileri.setFixedHeight(550)
+        filmBilgileri.setStyleSheet(yaziSitil)
+        filmBilgileri.setReadOnly(True)
+        #filmBilgileri.setFont(yaziFont)   
+        filmBilgileri.setHtml(f"""<font size='6'><p><b>Yönetmen :</b> {result.director.values[0]}</p>
+                              <p><b>Oyuncular :</b> {result.cast.values[0]}</p>
+                              <p><b>Ülke :</b> {result.country.values[0]}</p>
+                              <p><b>Yapım Yılı :</b> {result.release_year.values[0]}</p>
+                              <p><b>Süre :</b> {result.duration.values[0]}</p>
+                              <p><b>Kategori :</b> {result.listed_in.values[0]}</p>
+                              <p><b>Açıklamalar :</b> {result.description.values[0]}</p></font>""")    
+        
+        
+        kapatBtn = QPushButton("Kapat",font=butonFont)
+        kapatBtn.setFixedWidth(675)
+        kapatBtn.setStyleSheet(btnSitil)       
+        kapatBtn.clicked.connect(self.kapat)
+        
+        dikey.addWidget(baslik)
+        dikey.addWidget(filmBilgileri)
+        dikey.addWidget(kapatBtn)
+        dikey.addStretch()        
+        
+
+        yatay.addStretch()
+        yatay.addLayout(dikey)
+        yatay.addStretch()
+
+        self.setLayout(yatay)
+        self.setGeometry(300,300,700,600)
+        self.setFixedSize(700, 600)
+        self.setStyleSheet(pencereSitil)
+        self.setWindowTitle(pencereBaslik)
+
+    def kapat(self):
+        self.close()
 
 # kullanıcı giriş ekranı
 class GirisEkrani(QWidget):
@@ -605,6 +709,12 @@ class GirisEkrani(QWidget):
         self.setStyleSheet(pencereSitil)
         self.show()
         
+        # veritabanında kullanıcı yoksa kullanıcı kayıt formunu aç
+        
+        kontrol = kalem.execute("SELECT * FROM kullanici")
+        kBilgileri = kontrol.fetchall()
+        if len(kBilgileri) < 1:
+            self.kayitFormu()
 
     def kayitFormu(self):
         self.kFormu = KayitFormu()   # kayıt formunu açar
@@ -633,9 +743,9 @@ class GirisEkrani(QWidget):
 
 def main():
     uygulama = QApplication(sys.argv)
-    dene = FiltreEkrani()
-    dene.show()
-    #pencere = GirisEkrani()
+    #dene = FiltreEkrani()
+    #dene.show()
+    pencere = GirisEkrani()
     sys.exit(uygulama.exec_())
 
 if __name__ == '__main__':
