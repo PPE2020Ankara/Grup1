@@ -12,19 +12,35 @@ df = pd.read_csv('netflix_titles.csv')
 df = df.fillna(value= "unknown")
 
 # formlarda kullanılan yazı fontları ve stilleri burada tanımlanıyor
+tema = "dark"
 
-baslikfont = QFont("Century Gothic",20)
-butonFont = QFont("Century Gothic",14)
-yaziFont = QFont("Century Gothic",14)
-formYaziFont = QFont("Century Gothic",12)
-uyariFont = QFont("Century Gothic",14,)
-yaziSitil = "color :white"
-yaziSitilB = "color :white;font-weight:bold;"
-baslikSitil = "color :red;font-weight:bold;"
-uyariSitil = "color :red"
-editSitil = "color :black;background-color :white"
-btnSitil = "color :black;background-color :gray"
-pencereSitil = "background-color :black"
+if tema == "dark":    
+    baslikfont = QFont("Century Gothic",20)
+    butonFont = QFont("Century Gothic",14)
+    yaziFont = QFont("Century Gothic",14)
+    formYaziFont = QFont("Century Gothic",12)
+    uyariFont = QFont("Century Gothic",14,)
+    yaziSitil = "color :white"
+    yaziSitilB = "color :white;font-weight:bold;"
+    baslikSitil = "color :red;font-weight:bold;"
+    uyariSitil = "color :red"
+    editSitil = "color :black;background-color :white"
+    btnSitil = "color :black;background-color :gray"
+    pencereSitil = "background-color :black"
+elif tema == "light":
+    baslikfont = QFont("Century Gothic",20)
+    butonFont = QFont("Century Gothic",14)
+    yaziFont = QFont("Century Gothic",14)
+    formYaziFont = QFont("Century Gothic",12)
+    uyariFont = QFont("Century Gothic",14,)
+    yaziSitil = "color :black"
+    yaziSitilB = "color :black;font-weight:bold;"
+    baslikSitil = "color :red;font-weight:bold;"
+    uyariSitil = "color :red"
+    editSitil = "color :black;background-color :white"
+    btnSitil = "color :black;background-color :gray"
+    pencereSitil = "background-color :white"
+    
 
 # veritabanı bağlantısı tablo yoksa oluşturuluyor 
 
@@ -159,6 +175,9 @@ class KayitFormu(QWidget):
         kAdi = self.kAdi.text()
         kParola = self.kParola.text()        
         dTarihi = self.dTarihi.text()
+        
+        baglanti = sqlite3.connect("vt.db")
+        kalem = baglanti.cursor()
                    
         if len(adSoyad)<4:
             self.uyari.setText("Adınız Soyadınız enaz 4 karakter olmalı !")
@@ -179,7 +198,8 @@ class KayitFormu(QWidget):
                 baglanti.commit()
                 self.uyari.setText("Kullanıcı kaydınız oluşturuldu")
                 QTest.qWait(500)          
-                #self.close()          
+                #self.close()
+        baglanti.close()          
  
  #formu kapatmak için kullanılacak fonksiyon
     
@@ -204,6 +224,8 @@ class KayitGuncelle(QWidget):
         
         kAdi = GirisEkrani.kullanici
         
+        baglanti = sqlite3.connect("vt.db")
+        kalem = baglanti.cursor()
         kontrol = kalem.execute("SELECT * FROM kullanici WHERE kullaniciAdi = ?",(kAdi,))
         kBilgileri = kontrol.fetchall()[0]
         
@@ -298,6 +320,7 @@ class KayitGuncelle(QWidget):
         self.setFixedSize(500, 500)
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
+        baglanti.close()
 
 # güncelleme formundan gelen bilgilerin veritabanına yazılması için kullanılan fonksiyon
 
@@ -309,6 +332,9 @@ class KayitGuncelle(QWidget):
         kAdi = self.kAdi.text()       
         kParola = self.kParola.text()        
         dTarihi = self.dTarihi.text()
+        
+        baglanti = sqlite3.connect("vt.db")
+        kalem = baglanti.cursor()
                    
         if len(adSoyad)<4:
             self.uyari.setText("Adınız Soyadınız enaz 4 karakter olmalı !")
@@ -325,7 +351,8 @@ class KayitGuncelle(QWidget):
             baglanti.commit()
             self.uyari.setText("Bilgileriniz Güncellendi")
             QTest.qWait(500)          
-            #self.close()          
+            #self.close()  
+        baglanti.close()        
  
     def geriDon(self):
         self.close()   # Formu kapatmak için kullanılacak
@@ -342,7 +369,10 @@ class FiltreEkrani(QWidget):
         dikey1 = QVBoxLayout()
         dikey2 = QVBoxLayout()
         yatayBtn = QHBoxLayout()
-        yatayBosluk = QHBoxLayout()   
+        yatayBosluk = QHBoxLayout()
+        sureEtiket = QHBoxLayout() 
+        sureSlider = QHBoxLayout()
+        sureRadio = QHBoxLayout()     
         
         
         logo = QLabel("FİLTRE EKRANI")
@@ -356,7 +386,7 @@ class FiltreEkrani(QWidget):
         baslik.setFont(baslikfont)       
         
         turL = QLabel("Tür")
-        turL.setFixedHeight(75)
+        turL.setFixedHeight(45)
         turL.setStyleSheet(yaziSitilB)
         turL.setFont(yaziFont)
         
@@ -370,7 +400,7 @@ class FiltreEkrani(QWidget):
         
                
         ulkeL = QLabel("Ülke")
-        ulkeL.setFixedHeight(75)
+        ulkeL.setFixedHeight(45)
         ulkeL.setStyleSheet(yaziSitilB)
         ulkeL.setFont(yaziFont)
         
@@ -383,7 +413,7 @@ class FiltreEkrani(QWidget):
         self.ulke.addItems(ulkeler)
         
         yonetmenL = QLabel("Yönetmen")
-        yonetmenL.setFixedHeight(75)
+        yonetmenL.setFixedHeight(45)
         yonetmenL.setStyleSheet(yaziSitilB)
         yonetmenL.setFont(yaziFont)
         
@@ -392,16 +422,66 @@ class FiltreEkrani(QWidget):
         self.yonetmen.setFont(yaziFont) 
         
         sureL = QLabel("Süre")
-        sureL.setFixedHeight(75)
+        sureL.setFixedHeight(45)
         sureL.setStyleSheet(yaziSitilB)
         sureL.setFont(yaziFont)
         
-        self.sure = QSlider(Qt.Horizontal,self)
-        self.sure.setRange(0, 200)
-        self.sure.setFocusPolicy(Qt.NoFocus)
-        self.sure.setPageStep(5)
-        self.sure.setStyleSheet(editSitil)
-        self.sure.setFont(yaziFont) 
+        self.sureYok=QRadioButton("Süre Yok")
+        self.sureYok.setChecked(True)
+        self.sureYok.setStyleSheet(yaziSitil)
+        self.sureYok.setFont(yaziFont)       
+        self.sureYok.toggled.connect(self.sYok)
+        
+        self.dk=QRadioButton("Dakika")
+        self.dk.setChecked(False)
+        self.dk.setStyleSheet(yaziSitil)
+        self.dk.setFont(yaziFont)       
+        self.dk.toggled.connect(self.dkSecildi)
+ 
+        self.sezon=QRadioButton("Sezon")
+        self.sezon.setChecked(False)
+        self.sezon.setStyleSheet(yaziSitil)
+        self.sezon.setFont(yaziFont)        
+        self.sezon.toggled.connect(self.sezonSecildi)
+        
+        sureRadio.addWidget(self.sureYok)
+        sureRadio.addWidget(self.dk)
+        sureRadio.addWidget(self.sezon)
+                        
+        self.sureL1 = QLabel("")        
+        self.sureL1.setStyleSheet(yaziSitil)
+        self.sureL1.setFont(yaziFont)
+        
+        self.sureL2 = QLabel("")        
+        self.sureL2.setStyleSheet(yaziSitil)
+        self.sureL2.setFont(yaziFont)
+        
+        sureEtiket.addWidget(self.sureL1)
+        sureEtiket.addWidget(self.sureL2)
+        
+        self.sure1 = QSlider(Qt.Horizontal,self)
+        self.sure1.setEnabled(False)
+        self.sure1.setRange(0, 200)
+        self.sure1.setFocusPolicy(Qt.NoFocus)       
+        self.sure1.setTickInterval (5)
+        self.sure1.setTickPosition (QSlider.TicksBothSides)        
+        self.sure1.setStyleSheet(editSitil)
+        self.sure1.setFont(yaziFont)
+        self.sure1.valueChanged[int].connect(self.sureAl1) 
+        
+        self.sure2 = QSlider(Qt.Horizontal,self)
+        self.sure2.setEnabled(False)
+        self.sure2.setRange(0, 200)
+        self.sure2.setFocusPolicy(Qt.NoFocus)
+        self.sure2.setValue(0)      
+        self.sure2.setTickInterval (5)
+        self.sure2.setTickPosition (QSlider.TicksBothSides)        
+        self.sure2.setStyleSheet(editSitil)
+        self.sure2.setFont(yaziFont)
+        self.sure2.valueChanged[int].connect(self.sureAl2) 
+        
+        sureSlider.addWidget(self.sure1)
+        sureSlider.addWidget(self.sure2)
         
                        
         guncelle = QPushButton("Bilgilerimi Güncelle",font=butonFont)
@@ -448,8 +528,11 @@ class FiltreEkrani(QWidget):
         dikey1.addWidget(self.ulke)
         dikey1.addWidget(yonetmenL)
         dikey1.addWidget(self.yonetmen)
-        dikey1.addWidget(sureL)
-        dikey1.addWidget(self.sure)
+        dikey1.addWidget(sureL) 
+        dikey1.addLayout(sureRadio)        
+        dikey1.addLayout(sureEtiket)
+        dikey1.addLayout(sureSlider)
+        dikey1.addWidget(QLabel(""))
         dikey1.addWidget(listeleBnt)
         dikey1.addWidget(self.uyariLabel)
         dikey1.addStretch()
@@ -482,6 +565,44 @@ class FiltreEkrani(QWidget):
         self.setWindowTitle(pencereBaslik)
         self.setStyleSheet(pencereSitil)
     
+    def dkSecildi(self):
+        self.sure1.setRange(0, 200)
+        self.sure2.setRange(0, 200)
+        self.sure1.setValue(0) 
+        self.sure2.setValue(0)
+        self.sure1.setEnabled(True)
+        self.sure2.setEnabled(True)
+        self.sureL1.setText(str(self.sure1.value()) + " dk")
+        self.sureL2.setText(str(self.sure2.value()) + " dk")
+    
+    def sezonSecildi(self):
+        self.sure1.setRange(0, 20)
+        self.sure2.setRange(0, 20)
+        self.sure1.setValue(0)
+        self.sure2.setValue(0)
+        self.sure1.setEnabled(True)
+        self.sure2.setEnabled(True)  
+        self.sureL1.setText(str(self.sure1.value()) + " sezon")
+        self.sureL2.setText(str(self.sure2.value()) + " sezon")
+    
+    def sYok(self):        
+        self.sure1.setValue(0) 
+        self.sure2.setValue(0)
+        self.sure1.setEnabled(False)
+        self.sure2.setEnabled(False)
+    
+    def sureAl1(self,value):
+        if self.dk.isChecked():            
+            self.sureL1.setText(str(value) + " dk")
+        else:
+            self.sureL1.setText(str(value) + " sezon")
+    
+    def sureAl2(self,value):
+        if self.dk.isChecked():
+            self.sureL2.setText(str(value) + " dk")
+        else:
+            self.sureL2.setText(str(value) + " sezon")
+    
     # güncelle butonu ile güncelleme formunun açılması için kullanılan fonksiyon
     def guncellemeFormu(self):
         self.gFormu = KayitGuncelle()   # kayıt güncelleme formunu açar
@@ -497,22 +618,35 @@ class FiltreEkrani(QWidget):
         tur = self.tur.currentText()
         ulke = self.ulke.currentText()
         yonetmen = self.yonetmen.text()
-        sure = self.sure.value()
+        sure1 = self.sure1.value()
+        sure2 = self.sure2.value()
         
         result = df              
         
         if tur != "Seçiniz":            
             result = result[(result.listed_in.str.contains(tur)) | (result['listed_in']==tur)]
-            #print(len(result))           
-        
+            
         if ulke != "Seçiniz":
             result = result[(result.country.str.contains(ulke)) | (result['country']==ulke)]
-            #print(len(result))
-        
+            
         if yonetmen != "":
             result = result[(result.director.str.contains(yonetmen)) | (result['director']==yonetmen)]
-            #print(len(result))              
-        
+             
+        if self.dk.isChecked() or self.sezon.isChecked():
+            if sure1>sure2:
+                sureMax = sure1
+                sureMin = sure2
+            else:
+                sureMax = sure2
+                sureMin = sure1
+            
+            if self.dk.isChecked():
+                sureler = [str(sure)+" min" for sure in range(sureMin,sureMax+1)]
+            else:
+                sureler = [str(sure)+" Seasons" for sure in range(sureMin,sureMax+1)]           
+             
+            result = result[(result['duration'].isin(sureler))]  # .isin metotu liste içerisinde olup olmadığını karşılaştırır
+                         
         #print(len(result))
         self.uyariLabel.setText(str(len(result)) + " Sonuç listelendi")    
         self.sonuclar.clear()
@@ -710,11 +844,13 @@ class GirisEkrani(QWidget):
         self.show()
         
         # veritabanında kullanıcı yoksa kullanıcı kayıt formunu aç
-        
+        baglanti = sqlite3.connect("vt.db")
+        kalem = baglanti.cursor()
         kontrol = kalem.execute("SELECT * FROM kullanici")
         kBilgileri = kontrol.fetchall()
         if len(kBilgileri) < 1:
             self.kayitFormu()
+        baglanti.close()
 
     def kayitFormu(self):
         self.kFormu = KayitFormu()   # kayıt formunu açar
@@ -726,6 +862,8 @@ class GirisEkrani(QWidget):
         kAdi = self.kAdi.text()
         kParola = self.kParola.text()
         
+        baglanti = sqlite3.connect("vt.db")
+        kalem = baglanti.cursor()
         kontrol = kalem.execute("SELECT * FROM kullanici WHERE kullaniciAdi = ?",(kAdi,))
         durum = kontrol.fetchall()
         if len(durum)<1:
@@ -739,7 +877,8 @@ class GirisEkrani(QWidget):
                 QTest.qWait(500)        
                 self.filtreler = FiltreEkrani() 
                 self.filtreler.show() 
-                self.close()                 
+                self.close() 
+        baglanti.close()                
 
 def main():
     uygulama = QApplication(sys.argv)
