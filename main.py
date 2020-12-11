@@ -5,14 +5,19 @@ from PyQt5.QtTest import *
 from PyQt5.QtCore import Qt
 import sqlite3
 import pandas as pd
+import xlsxwriter
 
 # csv dosyasını okuma ve nan değerleri unknown olarak değiştirme
 
 df = pd.read_csv('netflix_titles.csv')
 df = df.fillna(value= "unknown")
 
+cevir = lambda x : x.replace("İ","i").replace("I","İ").lower()
+df["yonetmen"] = df["director"].apply(cevir)
+
 # formlarda kullanılan yazı fontları ve stilleri burada tanımlanıyor
 tema = "dark"
+icon = 'logo.png'
 
 if tema == "dark":    
     baslikfont = QFont("Century Gothic",20)
@@ -26,6 +31,7 @@ if tema == "dark":
     uyariSitil = "color :red"
     editSitil = "color :black;background-color :white"
     btnSitil = "color :black;background-color :gray"
+    btnSitil2 = "color :white;font-weight:bold;background-color :#4c4c4c"
     pencereSitil = "background-color :black"
 elif tema == "light":
     baslikfont = QFont("Century Gothic",20)
@@ -39,6 +45,7 @@ elif tema == "light":
     uyariSitil = "color :red"
     editSitil = "color :black;background-color :white"
     btnSitil = "color :black;background-color :gray"
+    btnSitil2 = "color :black;background-color :gray"    
     pencereSitil = "background-color :white"
     
 
@@ -164,6 +171,7 @@ class KayitFormu(QWidget):
         self.setFixedSize(500, 500)
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
+        self.setWindowIcon(QIcon(icon))
 
 # yeni kullanıcı formundan gelen bilgilerin veritabanına eklenmesi icin tanımlanan fonksiyon
 
@@ -320,6 +328,7 @@ class KayitGuncelle(QWidget):
         self.setFixedSize(500, 500)
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
+        self.setWindowIcon(QIcon(icon))
         baglanti.close()
 
 # güncelleme formundan gelen bilgilerin veritabanına yazılması için kullanılan fonksiyon
@@ -361,10 +370,12 @@ class KayitGuncelle(QWidget):
 
 class FiltreEkrani(QWidget):
     filmAdi = ""
+    dosyayaYaz = []
+    listeleme = False
     def __init__(self):
         super().__init__()        
 
-        pencereBaslik = "Netflix Filtreleme Ekranı"        
+        pencereBaslik = "Netflix Filtreleme"        
         yatay0 = QHBoxLayout()
         dikey1 = QVBoxLayout()
         dikey2 = QVBoxLayout()
@@ -372,21 +383,33 @@ class FiltreEkrani(QWidget):
         yatayBosluk = QHBoxLayout()
         sureEtiket = QHBoxLayout() 
         sureSlider = QHBoxLayout()
-        sureRadio = QHBoxLayout()     
+        sureRadio = QHBoxLayout() 
+        yatayRating = QHBoxLayout()
+        yatayListele = QHBoxLayout()
+        yatayBaslik = QHBoxLayout()
+        yatayLogo = QHBoxLayout()       
         
         
         logo = QLabel("FİLTRE EKRANI")
-        logo.setFixedHeight(175)
+        logo.setFixedHeight(100)
         logo.setFixedWidth(250)
         logo.setPixmap(QPixmap("logoF.png"))
+        
+        yatayLogo.addStretch()
+        yatayLogo.addWidget(logo)
+        yatayLogo.addStretch()
         
         baslik = QLabel("Netflix Filtreleme")
         baslik.setFixedHeight(100)
         baslik.setStyleSheet(baslikSitil)
-        baslik.setFont(baslikfont)       
+        baslik.setFont(baslikfont) 
+        
+        yatayBaslik.addStretch()
+        yatayBaslik.addWidget(baslik)
+        yatayBaslik.addStretch()     
         
         turL = QLabel("Tür")
-        turL.setFixedHeight(45)
+        turL.setFixedHeight(45)        
         turL.setStyleSheet(yaziSitilB)
         turL.setFont(yaziFont)
         
@@ -413,16 +436,17 @@ class FiltreEkrani(QWidget):
         self.ulke.addItems(ulkeler)
         
         yonetmenL = QLabel("Yönetmen")
-        yonetmenL.setFixedHeight(45)
+        yonetmenL.setFixedHeight(45)          
         yonetmenL.setStyleSheet(yaziSitilB)
         yonetmenL.setFont(yaziFont)
         
         self.yonetmen = QLineEdit()
+        self.yonetmen.setPlaceholderText("Yönetmen giriniz")        
         self.yonetmen.setStyleSheet(editSitil)
         self.yonetmen.setFont(yaziFont) 
         
-        sureL = QLabel("Süre")
-        sureL.setFixedHeight(45)
+        sureL = QLabel("Süre") 
+        sureL.setFixedHeight(45)          
         sureL.setStyleSheet(yaziSitilB)
         sureL.setFont(yaziFont)
         
@@ -482,8 +506,15 @@ class FiltreEkrani(QWidget):
         
         sureSlider.addWidget(self.sure1)
         sureSlider.addWidget(self.sure2)
+      
+        ratings = self.bilgiAl(df["rating"])   
         
-                       
+        self.rating = QComboBox()
+        self.rating.setStyleSheet(editSitil)
+        self.rating.setFont(yaziFont)
+        self.rating.addItem("Seçiniz")
+        self.rating.addItems(ratings)
+                      
         guncelle = QPushButton("Bilgilerimi Güncelle",font=butonFont)
         guncelle.setFixedWidth(250)
         guncelle.setStyleSheet(btnSitil)       
@@ -494,15 +525,32 @@ class FiltreEkrani(QWidget):
         listeleBnt.setStyleSheet(btnSitil)       
         listeleBnt.clicked.connect(self.listele)
         
+        yatayListele.addStretch()
+        yatayListele.addWidget(listeleBnt)
+        
+        ratingBnt = QPushButton("Derecelendirme",font=butonFont)
+        ratingBnt.setFixedWidth(225)
+        ratingBnt.setStyleSheet(btnSitil2)       
+        ratingBnt.clicked.connect(self.derecelendirmeBilgileri) 
+        
         indirBtn = QPushButton("Dosyayı İndir",font=butonFont)
         indirBtn.setFixedWidth(170)
-        indirBtn.setStyleSheet(btnSitil)       
+        indirBtn.setStyleSheet(btnSitil)               
         indirBtn.clicked.connect(self.dosyaIndir)
         
         cikisBtn = QPushButton("Çıkış",font=butonFont)
         cikisBtn.setFixedWidth(170)
         cikisBtn.setStyleSheet(btnSitil)       
         cikisBtn.clicked.connect(self.cikis)
+        
+        
+        hakkimizdaBtn = QPushButton("Hakkımızda",font=butonFont)
+        hakkimizdaBtn.setFixedWidth(170)
+        hakkimizdaBtn.setStyleSheet(btnSitil)       
+        hakkimizdaBtn.clicked.connect(self.hakkimizda)
+        
+        yatayRating.addWidget(ratingBnt)
+        yatayRating.addWidget(self.rating)
         
         self.uyariLabel = QLabel("")
         self.uyariLabel.setFixedHeight(100)
@@ -521,32 +569,32 @@ class FiltreEkrani(QWidget):
         self.sonuclar.itemClicked.connect(self.filmBilgileri)
         
         
-        dikey1.addWidget(logo)
+        dikey1.addStretch()
+        dikey1.addLayout(yatayLogo)        
         dikey1.addWidget(turL)
         dikey1.addWidget(self.tur)
         dikey1.addWidget(ulkeL)
         dikey1.addWidget(self.ulke)
         dikey1.addWidget(yonetmenL)
         dikey1.addWidget(self.yonetmen)
+        dikey1.addWidget(QLabel(""))
+        dikey1.addLayout(yatayRating)
         dikey1.addWidget(sureL) 
         dikey1.addLayout(sureRadio)        
         dikey1.addLayout(sureEtiket)
-        dikey1.addLayout(sureSlider)
-        dikey1.addWidget(QLabel(""))
-        dikey1.addWidget(listeleBnt)
-        dikey1.addWidget(self.uyariLabel)
-        dikey1.addStretch()
+        dikey1.addLayout(sureSlider)               
+        dikey1.addLayout(yatayListele)
+        dikey1.addWidget(self.uyariLabel)        
         
         yatayBtn.addStretch()
         yatayBtn.addWidget(guncelle)
         yatayBtn.addWidget(indirBtn)
-        yatayBtn.addWidget(cikisBtn)
+        yatayBtn.addWidget(hakkimizdaBtn)
         
-        bosluk = QLabel("")
-        bosluk.setFixedHeight(50)
-        yatayBosluk.addWidget(bosluk)
+        yatayBosluk.addStretch()
+        yatayBosluk.addWidget(cikisBtn)
                 
-        dikey2.addWidget(baslik)
+        dikey2.addLayout(yatayBaslik)
         dikey2.addWidget(self.sonuclar)
         dikey2.addStretch()  
         dikey2.addLayout(yatayBtn)
@@ -564,6 +612,7 @@ class FiltreEkrani(QWidget):
         self.setFixedSize(1054, 768)
         self.setWindowTitle(pencereBaslik)
         self.setStyleSheet(pencereSitil)
+        self.setWindowIcon(QIcon(icon))
     
     def dkSecildi(self):
         self.sure1.setRange(0, 200)
@@ -608,19 +657,31 @@ class FiltreEkrani(QWidget):
         self.gFormu = KayitGuncelle()   # kayıt güncelleme formunu açar
         self.gFormu.show()
     
+    def hakkimizda(self):
+        self.hakkimizda = HakkimizdaForm()   # kayıt güncelleme formunu açar
+        self.hakkimizda.show()
+    
     def filmBilgileri(self,item):
         FiltreEkrani.filmAdi = item.text()        
         self.filmBilgi = FilmBilgileri()   # kayıt güncelleme formunu açar
         self.filmBilgi.show()
+        
+    def derecelendirmeBilgileri(self,item):               
+        self.bilgi = DerecelendirmeBilgileri()   # kayıt güncelleme formunu açar
+        self.bilgi.show()
     
     # filtreler seçildikten sonra listeleme sonuçlarının gösterilmesi    
     def listele(self):
         tur = self.tur.currentText()
         ulke = self.ulke.currentText()
-        yonetmen = self.yonetmen.text()
+        yonetmen = self.yonetmen.text().strip()
+        rating = self.rating.currentText()
         sure1 = self.sure1.value()
         sure2 = self.sure2.value()
         
+        yonetmen = yonetmen.replace("İ","i").replace("I","ı").lower()
+             
+        print(yonetmen) 
         result = df              
         
         if tur != "Seçiniz":            
@@ -630,7 +691,10 @@ class FiltreEkrani(QWidget):
             result = result[(result.country.str.contains(ulke)) | (result['country']==ulke)]
             
         if yonetmen != "":
-            result = result[(result.director.str.contains(yonetmen)) | (result['director']==yonetmen)]
+            result = result[(result.yonetmen.str.contains(yonetmen)) | (result['yonetmen']==yonetmen)]
+        
+        if rating != "Seçiniz":
+            result = result[result['rating']==rating]
              
         if self.dk.isChecked() or self.sezon.isChecked():
             if sure1>sure2:
@@ -646,6 +710,8 @@ class FiltreEkrani(QWidget):
                 sureler = [str(sure)+" Seasons" for sure in range(sureMin,sureMax+1)]           
              
             result = result[(result['duration'].isin(sureler))]  # .isin metotu liste içerisinde olup olmadığını karşılaştırır
+        FiltreEkrani.dosyayaYaz = result
+        FiltreEkrani.listeleme = True
                          
         #print(len(result))
         self.uyariLabel.setText(str(len(result)) + " Sonuç listelendi")    
@@ -654,9 +720,32 @@ class FiltreEkrani(QWidget):
     
     # dosya indirme işlemlerinin yapıldığı fonksiyon
     def dosyaIndir(self):
-        pass   # dosya indirme komutları        
+        if FiltreEkrani.listeleme:
+            dosya = self.dosya_dialog() # dosya dialog kutusunu aç            
+            if isinstance(dosya, list): # gelen değer liste mi?
+                kalem = pd.ExcelWriter(dosya[0]+".xlsx", engine="xlsxwriter")
+                FiltreEkrani.dosyayaYaz.to_excel(kalem, sheet_name="Filmler")   
+                kalem.save()
+                self.uyariLabel.setText("Dosya kaydedildi")
+                QTest.qWait(2000)
+                self.uyariLabel.setText("")   
+            else:
+                self.uyariLabel.setText("İşlemi iptal ettiniz.")
+                QTest.qWait(2000)
+                self.uyariLabel.setText("")                    
+        else:
+            self.uyariLabel.setText(" Önce listeleme yapmalısınız.")
+            QTest.qWait(2000)
+            self.uyariLabel.setText("")        
   
-# çıkış butonuna basılması ile çalışacak fonksiyon
+    def dosya_dialog(self):
+        dlg = QFileDialog()
+        dlg.setFileMode(QFileDialog.AnyFile)
+        dlg.setAcceptMode (QFileDialog.AcceptSave)             
+        if dlg.exec_():
+            dosyaAdi = dlg.selectedFiles()
+            return dosyaAdi
+    # çıkış butonuna basılması ile çalışacak fonksiyon
     def cikis(self):
         qApp.quit()   # çıkış  için kullanılacak
         
@@ -677,49 +766,29 @@ class FilmBilgileri(QWidget):
                 
         pencereBaslik = "Film Bilgisi"
         yatay = QHBoxLayout()
-        dikey = QVBoxLayout()
-        yatayAdi = QHBoxLayout()
-        yatayKadi = QHBoxLayout()
-        yatayParola = QHBoxLayout()
-        yatayDtarihi = QHBoxLayout()
-        yatayUyari = QHBoxLayout()
-        yatayBtn = QHBoxLayout()
+        dikey = QVBoxLayout()        
         
         filmAdi = FiltreEkrani.filmAdi          
         result = df[df['title']==filmAdi]        
-        
-        
-        baslik = QLabel("FİLM ADI  :  " + filmAdi)
-        baslik.setFixedWidth(700)
-        baslik.setStyleSheet(yaziSitilB)
-        baslik.setFont(yaziFont)         
         
         filmBilgileri = QTextEdit()
         filmBilgileri.setFixedWidth(675)
         filmBilgileri.setFixedHeight(550)
         filmBilgileri.setStyleSheet(yaziSitil)
-        filmBilgileri.setReadOnly(True)
-        #filmBilgileri.setFont(yaziFont)   
-        filmBilgileri.setHtml(f"""<font size='6'><p><b>Yönetmen :</b> {result.director.values[0]}</p>
+        filmBilgileri.setReadOnly(True)        
+        filmBilgileri.setHtml(f"""<font size='6'>
+                              <p align="center" style="color:red;"><b>{filmAdi}</b></p>
+                              <p><b>Yönetmen :</b> {result.director.values[0]}</p>
                               <p><b>Oyuncular :</b> {result.cast.values[0]}</p>
                               <p><b>Ülke :</b> {result.country.values[0]}</p>
                               <p><b>Yapım Yılı :</b> {result.release_year.values[0]}</p>
                               <p><b>Süre :</b> {result.duration.values[0]}</p>
                               <p><b>Kategori :</b> {result.listed_in.values[0]}</p>
-                              <p><b>Açıklamalar :</b> {result.description.values[0]}</p></font>""")    
-        
-        
-        kapatBtn = QPushButton("Kapat",font=butonFont)
-        kapatBtn.setFixedWidth(675)
-        kapatBtn.setStyleSheet(btnSitil)       
-        kapatBtn.clicked.connect(self.kapat)
-        
-        dikey.addWidget(baslik)
+                              <p><b>Açıklamalar :</b> {result.description.values[0]}</p>
+                              <p><b>Derecelendirme :</b> {result.rating.values[0]}</p>
+                              </font>""")    
         dikey.addWidget(filmBilgileri)
-        dikey.addWidget(kapatBtn)
-        dikey.addStretch()        
         
-
         yatay.addStretch()
         yatay.addLayout(dikey)
         yatay.addStretch()
@@ -729,10 +798,81 @@ class FilmBilgileri(QWidget):
         self.setFixedSize(700, 600)
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
+        self.setWindowIcon(QIcon(icon))
 
-    def kapat(self):
-        self.close()
+# derecelendirme bilgilri açıklama ekranı
+class DerecelendirmeBilgileri(QWidget):
+    def __init__(self):
+        super().__init__()  
+                
+        pencereBaslik = "Derecelendirme Bilgileri"
+        yatay = QHBoxLayout()
+        dikey = QVBoxLayout()     
+        
+        bilgiler = QTextEdit()
+        bilgiler.setFixedWidth(675)
+        bilgiler.setFixedHeight(550)
+        bilgiler.setStyleSheet(yaziSitil)
+        bilgiler.setReadOnly(True)        
+        bilgiler.setHtml(f"""<font size='5'>
+                            <p align="center" style="color:red;"><b>Derecelendirme Bilgileri</b></p>
+                            <p><b>G  :</b> Her yaştan izleyicinin izlemesinde sakınca olmayan filmler.</p>
+                            <p><b>NC-17 :</b> 17 yaş altı çocuklar için uygun olmayan filmler. Film tamamen yetişkinlere yöneliktir. </p>
+                            <p><b>NR  :</b> Henüz derecelendirilmemiş filmler.</p>
+                            <p><b>PG :</b> Ebeveynlerin rehberliği tavsiye edilir. İçerik çocuklar için uygun olmayabilir.</p>
+                            <p><b>PG-13 :</b> 13 yaş altı çocuklar için uygun olmayan filmler.</p>
+                            <p><b>R :</b> 17 yaşın altı için bir ebeveynin refakati gereklidir.</p>
+                            <p><b>TV-14 :</b> Bu program 14 yaşın altındaki çocuklar için uygun olmayabilir.  </p>
+                            <p><b>TV-G :</b> Bu program her yaş için uygundur. </p>
+                            <p><b>TV-MA :</b> Bu program, yetişkin ve yetişkin izleyiciler tarafından görülmek üzere tasarlanmıştır ve 17 yaşın altındaki çocuklar için uygun olmayabilir.</p>
+                            <p><b>TV-PG :</b> Bu program, ebeveynlerin küçük çocuklar için uygun bulmayabileceği materyaller içermektedir. Ebeveyn rehberliği önerilir.  </p>
+                            <p><b>TV-Y:</b> Bu program, 2-6 yaş arası çocuklar da dahil olmak üzere çok genç bir kitleye yöneliktir. </p>
+                            <p><b>TV-Y7 :</b> Bu program en çok 7 yaş ve üstü çocuklar için uygundur. </p>
+                            <p><b>TV-Y7-FV :</b> Bu program en çok 7 yaş ve üstü çocuklar için uygundur.  Fantezi şiddet TV-Y7 derecelendirmesine özel </p>
+                            </font>""")    
+        dikey.addWidget(bilgiler)
+        
+        yatay.addStretch()
+        yatay.addLayout(dikey)
+        yatay.addStretch()
 
+        self.setLayout(yatay)
+        self.setGeometry(300,300,700,600)
+        self.setFixedSize(700, 600)
+        self.setStyleSheet(pencereSitil)
+        self.setWindowTitle(pencereBaslik)
+        self.setWindowIcon(QIcon(icon))
+
+class HakkimizdaForm(QWidget):
+    def __init__(self):
+        super().__init__()  
+                
+        pencereBaslik = "Program Hakkında"
+        yatay = QHBoxLayout()
+        dikey = QVBoxLayout()     
+        
+        bilgiler = QTextEdit()
+        bilgiler.setFixedWidth(675)
+        bilgiler.setFixedHeight(550)
+        bilgiler.setStyleSheet(yaziSitil)
+        bilgiler.setReadOnly(True)        
+        bilgiler.setHtml(f"""<font size='5'>
+                            <p align="center" style="color:red;"><b>Program Hakkında</b></p>
+                            
+                            </font>""")    
+        dikey.addWidget(bilgiler)
+        
+        yatay.addStretch()
+        yatay.addLayout(dikey)
+        yatay.addStretch()
+
+        self.setLayout(yatay)
+        self.setGeometry(300,300,700,600)
+        self.setFixedSize(700, 600)
+        self.setStyleSheet(pencereSitil)
+        self.setWindowTitle(pencereBaslik)
+        self.setWindowIcon(QIcon(icon))
+    
 # kullanıcı giriş ekranı
 class GirisEkrani(QWidget):
     
@@ -841,6 +981,7 @@ class GirisEkrani(QWidget):
         self.setFixedSize(800, 600)
         self.setWindowTitle(self.pencereBaslik)
         self.setStyleSheet(pencereSitil)
+        self.setWindowIcon(QIcon(icon))        
         self.show()
         
         # veritabanında kullanıcı yoksa kullanıcı kayıt formunu aç
