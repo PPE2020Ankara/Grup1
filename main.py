@@ -6,13 +6,14 @@ from PyQt5.QtCore import Qt
 import sqlite3
 import pandas as pd
 import xlsxwriter
+from datetime import date
 
 # csv dosyasını okuma ve nan değerleri unknown olarak değiştirme
 
 df = pd.read_csv('netflix_titles.csv')
 df = df.fillna(value= "unknown")
 
-cevir = lambda x : x.replace("İ","i").replace("I","İ").lower()
+cevir = lambda x : x.replace("İ","i").replace("I","ı").lower()
 df["yonetmen"] = df["director"].apply(cevir)
 
 # formlarda kullanılan yazı fontları ve stilleri burada tanımlanıyor
@@ -361,7 +362,7 @@ class KayitGuncelle(QWidget):
             self.uyari.setText("Bilgileriniz Güncellendi")
             QTest.qWait(500)          
             #self.close()  
-        baglanti.close()        
+        baglanti.close()               
  
     def geriDon(self):
         self.close()   # Formu kapatmak için kullanılacak
@@ -389,15 +390,22 @@ class FiltreEkrani(QWidget):
         yatayBaslik = QHBoxLayout()
         yatayLogo = QHBoxLayout()       
         
+        yasDf = self.yasaGoreDf() 
         
         logo = QLabel("FİLTRE EKRANI")
         logo.setFixedHeight(100)
         logo.setFixedWidth(250)
         logo.setPixmap(QPixmap("logoF.png"))
         
+        kullanici = QLabel(GirisEkrani.kullanici)        
+        kullanici.setStyleSheet(baslikSitil)
+        kullanici.setFont(baslikfont) 
+        
         yatayLogo.addStretch()
         yatayLogo.addWidget(logo)
+        yatayLogo.addWidget(kullanici)
         yatayLogo.addStretch()
+        
         
         baslik = QLabel("Netflix Filtreleme")
         baslik.setFixedHeight(100)
@@ -413,7 +421,7 @@ class FiltreEkrani(QWidget):
         turL.setStyleSheet(yaziSitilB)
         turL.setFont(yaziFont)
         
-        turler = self.bilgiAl(df["listed_in"])   # bilgiAl fonksiyonu csv den türleri verir
+        turler = self.bilgiAl(yasDf["listed_in"])   # bilgiAl fonksiyonu csv den türleri verir
         
         self.tur = QComboBox()
         self.tur.setStyleSheet(editSitil)
@@ -427,7 +435,7 @@ class FiltreEkrani(QWidget):
         ulkeL.setStyleSheet(yaziSitilB)
         ulkeL.setFont(yaziFont)
         
-        ulkeler = self.bilgiAl(df["country"])
+        ulkeler = self.bilgiAl(yasDf["country"])
         ulkeler[0] = "Seçiniz" # bilgiAl fonksiyonu csv den ülkeleri verir 
         
         self.ulke = QComboBox()
@@ -491,8 +499,9 @@ class FiltreEkrani(QWidget):
         self.sure1.setTickPosition (QSlider.TicksBothSides)        
         self.sure1.setStyleSheet(editSitil)
         self.sure1.setFont(yaziFont)
-        self.sure1.valueChanged[int].connect(self.sureAl1) 
-        
+        self.sure1.valueChanged[int].connect(self.sureAl1)
+        self.sure1.sliderReleased.connect(self.degerAl1)
+                        
         self.sure2 = QSlider(Qt.Horizontal,self)
         self.sure2.setEnabled(False)
         self.sure2.setRange(0, 200)
@@ -503,11 +512,12 @@ class FiltreEkrani(QWidget):
         self.sure2.setStyleSheet(editSitil)
         self.sure2.setFont(yaziFont)
         self.sure2.valueChanged[int].connect(self.sureAl2) 
+        self.sure2.sliderReleased.connect(self.degerAl2) 
         
         sureSlider.addWidget(self.sure1)
         sureSlider.addWidget(self.sure2)
       
-        ratings = self.bilgiAl(df["rating"])   
+        ratings = self.ratingListesiOlustur(GirisEkrani.yas)  
         
         self.rating = QComboBox()
         self.rating.setStyleSheet(editSitil)
@@ -552,13 +562,17 @@ class FiltreEkrani(QWidget):
         yatayRating.addWidget(ratingBnt)
         yatayRating.addWidget(self.rating)
         
-        self.uyariLabel = QLabel("")
+        sonuc = yasDf["title"].sort_values()
+        #print(len(sonuc))
+        
+        uyari = str(len(yasDf)) + " Sonuç listelendi"
+        
+        self.uyariLabel = QLabel(uyari)
         self.uyariLabel.setFixedHeight(100)
         self.uyariLabel.setStyleSheet(uyariSitil)
         self.uyariLabel.setFont(uyariFont)  
-               
-        sonuc = df["title"].sort_values()
-        #print(len(sonuc))
+        
+       
         
         self.sonuclar = QListWidget()
         self.sonuclar.setFixedWidth(600)
@@ -614,6 +628,11 @@ class FiltreEkrani(QWidget):
         self.setStyleSheet(pencereSitil)
         self.setWindowIcon(QIcon(icon))
     
+    def yasaGoreDf(self):
+        rating = self.ratingListesiOlustur(GirisEkrani.yas) 
+        result = df[(df['rating'].isin(rating))] 
+        return result
+    
     def dkSecildi(self):
         self.sure1.setRange(0, 200)
         self.sure2.setRange(0, 200)
@@ -621,8 +640,8 @@ class FiltreEkrani(QWidget):
         self.sure2.setValue(0)
         self.sure1.setEnabled(True)
         self.sure2.setEnabled(True)
-        self.sureL1.setText(str(self.sure1.value()) + " dk")
-        self.sureL2.setText(str(self.sure2.value()) + " dk")
+        self.sureL1.setText("En Az: "+str(self.sure1.value()) + " dk")
+        self.sureL2.setText("En Fazla: "+str(self.sure2.value()) + " dk")
     
     def sezonSecildi(self):
         self.sure1.setRange(0, 20)
@@ -631,8 +650,8 @@ class FiltreEkrani(QWidget):
         self.sure2.setValue(0)
         self.sure1.setEnabled(True)
         self.sure2.setEnabled(True)  
-        self.sureL1.setText(str(self.sure1.value()) + " sezon")
-        self.sureL2.setText(str(self.sure2.value()) + " sezon")
+        self.sureL1.setText("En Az: "+str(self.sure1.value()) + " sezon")
+        self.sureL2.setText("En Fazla: "+str(self.sure2.value()) + " sezon")
     
     def sYok(self):        
         self.sure1.setValue(0) 
@@ -640,17 +659,30 @@ class FiltreEkrani(QWidget):
         self.sure1.setEnabled(False)
         self.sure2.setEnabled(False)
     
+    def degerAl1(self):
+        if self.dk.isChecked():
+            self.sure2.setRange(self.sure1.value(), 200)
+        else:
+            self.sure2.setRange(self.sure1.value(), 20)
+    
+    def degerAl2(self):
+        if self.dk.isChecked():
+            self.sure1.setRange(0, self.sure2.value())
+        else:
+            self.sure1.setRange(0, self.sure2.value())
+    
     def sureAl1(self,value):
         if self.dk.isChecked():            
-            self.sureL1.setText(str(value) + " dk")
+            self.sureL1.setText("En Az: "+str(value) + " dk")            
         else:
-            self.sureL1.setText(str(value) + " sezon")
+            self.sureL1.setText("En Az: "+str(value) + " sezon")                   
     
     def sureAl2(self,value):
         if self.dk.isChecked():
-            self.sureL2.setText(str(value) + " dk")
+            self.sureL2.setText("En Fazla: "+str(value) + " dk")            
         else:
-            self.sureL2.setText(str(value) + " sezon")
+            self.sureL2.setText("En Fazla: "+str(value) + " sezon")
+            
     
     # güncelle butonu ile güncelleme formunun açılması için kullanılan fonksiyon
     def guncellemeFormu(self):
@@ -682,7 +714,7 @@ class FiltreEkrani(QWidget):
         yonetmen = yonetmen.replace("İ","i").replace("I","ı").lower()
              
         print(yonetmen) 
-        result = df              
+        result = self.yasaGoreDf()              
         
         if tur != "Seçiniz":            
             result = result[(result.listed_in.str.contains(tur)) | (result['listed_in']==tur)]
@@ -759,6 +791,17 @@ class FiltreEkrani(QWidget):
         result = sorted(list(kume))
         return result
 
+    def ratingListesiOlustur(self, yas):
+        ratingList = ['TV-Y', 'G', 'TV-G']
+        if 7 < yas <= 14:
+            ratingList.extend(['TV-Y7-FV', 'TV-Y7', 'PG', 'TV-PG'])
+        elif 14 < yas <= 17:
+            ratingList.extend(['TV-Y7-FV', 'TV-Y7', 'PG', 'TV-PG', 'TV-14', 'PG-13'])
+        elif 18 < yas:
+            ratingList.extend(['NC-17', 'TV-MA', 'UR', 'TV-Y7-FV', 'TV-Y7', 'PG', 'TV-PG', 'TV-14', 'PG-13',"R","NR",'unknown'])
+            
+        return ratingList
+    
 # Film bilgi ekranı
 class FilmBilgileri(QWidget):
     def __init__(self):
@@ -877,6 +920,7 @@ class HakkimizdaForm(QWidget):
 class GirisEkrani(QWidget):
     
     kullanici = ""
+    yas = 0
     
     def __init__(self):
         super().__init__()
@@ -907,7 +951,9 @@ class GirisEkrani(QWidget):
         self.kAdi.setStyleSheet(editSitil)
         self.kAdi.setFixedWidth(350)
         self.kAdi.setFixedHeight(45)
-        self.kAdi.setPlaceholderText("Kullanici adinizi giriniz")              
+        self.kAdi.setPlaceholderText("Kullanici adinizi giriniz") 
+        self.kAdi.returnPressed.connect(self.girisKontrol)
+                     
 
         self.kParola = QLineEdit(font=yaziFont)
         self.kParola.setPlaceholderText("Parolanızı giriniz")
@@ -915,6 +961,7 @@ class GirisEkrani(QWidget):
         self.kParola.setFixedWidth(350)
         self.kParola.setFixedHeight(45)
         self.kParola.setEchoMode(QLineEdit.Password)
+        self.kParola.returnPressed.connect(self.girisKontrol)        
         
         self.giris = QPushButton("Giris Yap",font=butonFont)
         self.giris.setFixedWidth(350)
@@ -1015,6 +1062,7 @@ class GirisEkrani(QWidget):
             else:
                 self.uyari.setText(kAdi+" Giriş Başarılı")
                 GirisEkrani.kullanici = kAdi
+                GirisEkrani.yas = date.today().year - durum[0][4]                
                 QTest.qWait(500)        
                 self.filtreler = FiltreEkrani() 
                 self.filtreler.show() 
