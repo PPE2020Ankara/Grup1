@@ -896,12 +896,14 @@ class HakkimizdaForm(QWidget):
         
         bilgiler = QTextEdit()
         bilgiler.setFixedWidth(675)
-        bilgiler.setFixedHeight(550)
+        bilgiler.setFixedHeight(250)
         bilgiler.setStyleSheet(yaziSitil)
         bilgiler.setReadOnly(True)        
         bilgiler.setHtml(f"""<font size='5'>
-                            <p align="center" style="color:red;"><b>Program Hakkında</b></p>
+                            <p align="center" style="color:red;"><b>NETFLIX FİLTRELEME PROGRAMI</b></p>                            
+                            <p></br></br></br></br>Bu program Milli Eğitim Bakanlığı Öğretmen Yetiştirme ve Geliştirme Genel Müdürlüğü, 2020000497 numaralı  Python Eğitici Eğitimi Kursu kapsamında Ankara Pythoncular Derneği grubu tarafından hazırlanmıştır.  </p>
                             
+                            <div align="left"></br>ARALIK - 2020</div>
                             </font>""")    
         dikey.addWidget(bilgiler)
         
@@ -911,7 +913,7 @@ class HakkimizdaForm(QWidget):
 
         self.setLayout(yatay)
         self.setGeometry(300,300,700,600)
-        self.setFixedSize(700, 600)
+        self.setFixedSize(700, 300)
         self.setStyleSheet(pencereSitil)
         self.setWindowTitle(pencereBaslik)
         self.setWindowIcon(QIcon(icon))
